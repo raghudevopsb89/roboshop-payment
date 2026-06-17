@@ -7,11 +7,13 @@ import pika
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("payment")
 
 app = FastAPI(title="RoboShop Payment Service")
+Instrumentator().instrument(app).expose(app, include_in_schema=False, should_gzip=True)
 
 AMQP_HOST = os.getenv("AMQP_HOST", "rabbitmq")
 AMQP_USER = os.getenv("AMQP_USER", "guest")
