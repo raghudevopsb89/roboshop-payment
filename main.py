@@ -1,19 +1,70 @@
+import newrelic.agent
+newrelic.agent.initialize()
+
 import os
 import json
 import uuid
 import time
+import signal
 import logging
 import pika
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 
-logging.basicConfig(level=logging.INFO)
+class JsonLogFormatter(logging.Formatter):
+    def format(self, record):
+        payload = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created)) + f".{int(record.msecs):03d}Z",
+            "level": record.levelname.lower(),
+            "service": "payment",
+            "msg": record.getMessage(),
+        }
+        if hasattr(record, "extra_fields"):
+            payload.update(record.extra_fields)
+        return json.dumps(payload)
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(JsonLogFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 logger = logging.getLogger("payment")
+
+def jlog(level, msg, **extra):
+    rec = logger.makeRecord(logger.name, getattr(logging, level.upper()), "", 0, msg, None, None)
+    rec.extra_fields = extra
+    logger.handle(rec)
 
 app = FastAPI(title="RoboShop Payment Service")
 Instrumentator().instrument(app).expose(app, include_in_schema=False, should_gzip=True)
+
+_req_seq = 0
+
+@app.middleware("http")
+async def request_logger(request: Request, call_next):
+    global _req_seq
+    if request.url.path in ("/metrics", "/health"):
+        return await call_next(request)
+    _req_seq += 1
+    req_id = request.headers.get("x-request-id") or f"{os.getpid()}-{_req_seq}"
+    start = time.monotonic()
+    jlog("info", "req.start", reqId=req_id, method=request.method, path=request.url.path,
+         remote=request.client.host if request.client else None)
+    status = 0
+    event = "finish"
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["x-request-id"] = req_id
+        return response
+    except Exception as e:
+        event = "error"
+        jlog("error", "req.error", reqId=req_id, path=request.url.path, error=str(e))
+        raise
+    finally:
+        dur_ms = round((time.monotonic() - start) * 1000, 1)
+        jlog("info", f"req.{event}", reqId=req_id, method=request.method, path=request.url.path,
+             status=status, durMs=dur_ms)
 
 AMQP_HOST = os.getenv("AMQP_HOST", "rabbitmq")
 AMQP_USER = os.getenv("AMQP_USER", "guest")
@@ -56,6 +107,19 @@ class PaymentRequest(BaseModel):
 @app.on_event("startup")
 async def startup():
     connect_rabbitmq()
+    jlog("info", "server.listen", pid=os.getpid())
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    jlog("warn", "server.shutdown.done", pid=os.getpid())
+
+
+def _sig_handler(signum, _frame):
+    jlog("warn", "server.shutdown.start", signal=signal.Signals(signum).name)
+
+signal.signal(signal.SIGTERM, _sig_handler)
+signal.signal(signal.SIGINT, _sig_handler)
 
 
 @app.get("/health")
