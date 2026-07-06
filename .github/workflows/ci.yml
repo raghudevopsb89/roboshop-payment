@@ -1,0 +1,31 @@
+name: Payment CI Pipeline
+run-name: Payment CI Pipeline
+on: [push, workflow_dispatch]
+
+jobs:
+  lint:
+    runs-on: self-hosted
+    steps:
+      - run: echo "pylint *.py"
+
+  build:
+    needs: lint
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          make docker-build
+
+  test:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - run: echo "Test Cases"
+
+  publish:
+    needs: test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v7
+      - run: make docker-push
+
