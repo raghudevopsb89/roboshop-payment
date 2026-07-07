@@ -8,24 +8,15 @@ jobs:
     steps:
       - run: echo "pylint *.py"
 
-  build:
-    needs: lint
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v7
-      - run: |
-          make docker-build
-
   test:
     needs: build
     runs-on: self-hosted
     steps:
       - run: echo "Test Cases"
 
-  publish:
+  ci:
     needs: test
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v7
-      - run: make docker-push
+    uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
+    with:
+      component_name: payment
 
