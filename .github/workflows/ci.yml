@@ -9,7 +9,7 @@ jobs:
       - run: echo "pylint *.py"
 
   test:
-    needs: build
+    needs: lint
     runs-on: self-hosted
     steps:
       - run: echo "Test Cases"
