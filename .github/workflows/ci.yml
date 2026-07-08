@@ -1,6 +1,11 @@
 name: Payment CI Pipeline
 run-name: Payment CI Pipeline
-on: [push, workflow_dispatch]
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   lint:
