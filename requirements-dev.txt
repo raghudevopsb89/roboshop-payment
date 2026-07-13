@@ -1,6 +1,7 @@
 # Dev/test dependencies for the payment service.
 # Install alongside requirements.txt:  pip install -r requirements.txt -r requirements-dev.txt
 pytest==8.3.4
+pytest-cov==6.0.0
 # The following are already pinned in requirements.txt but are listed here so the
 # test suite can be installed standalone. TestClient (fastapi.testclient) needs httpx.
 fastapi==0.109.0

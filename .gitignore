@@ -11,6 +11,7 @@ env/
 # Test / coverage
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 
 # Env & secrets

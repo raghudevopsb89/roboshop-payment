@@ -1,4 +1,4 @@
-.PHONY: build run unit-test integration-test docker-build clean
+.PHONY: build run unit-test integration-test coverage docker-build clean
 
 build:
 	pip install -r requirements.txt
@@ -11,6 +11,9 @@ unit-test:
 
 integration-test:
 	pytest -m integration
+
+coverage:
+	pytest -m "not integration" --cov=. --cov-report=xml --cov-report=term-missing
 
 docker-build:
 	env
