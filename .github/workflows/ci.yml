@@ -17,10 +17,30 @@ jobs:
     needs: lint
     runs-on: self-hosted
     steps:
-      - run: echo "Test Cases"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python3 -m venv .venv
+      - run: . .venv/bin/activate && pip install --upgrade pip
+      - run: . .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
+      - run: . .venv/bin/activate && pytest -q
+
+  integration-test:
+    needs: test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python3 -m venv .venv
+      - run: . .venv/bin/activate && pip install --upgrade pip
+      - run: . .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
+      - run: . .venv/bin/activate && pytest -m integration
 
   ci:
-    needs: test
+    needs: integration-test
     uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
     with:
       component_name: payment
