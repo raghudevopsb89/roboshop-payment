@@ -39,8 +39,21 @@ jobs:
       - run: . .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
       - run: . .venv/bin/activate && pytest -m integration
 
+  sast:
+    needs: lint
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python3 -m venv .venv
+      - run: . .venv/bin/activate && pip install --upgrade pip
+      - run: . .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
+      - run: . .venv/bin/activate && make coverage sonar-scan
+
   ci:
-    needs: integration-test
+    needs: [integration-test, sast, test]
     uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
     with:
       component_name: payment
