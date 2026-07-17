@@ -22,6 +22,9 @@ docker-build:
 docker-push:
 	docker push raghudevopsb89.azurecr.io/roboshop-payment:${GITHUB_SHA}
 
+docker-scan:
+	trivy image raghudevopsb89.azurecr.io/roboshop-payment:${GITHUB_SHA} --exit-code 1 --ignore-unfixed -s HIGH,CRITICAL
+
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
